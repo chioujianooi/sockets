@@ -4,8 +4,8 @@
 class Socket {
 public:
     
-    Socket();
-    virtual ~Socket();
+    Socket(){};
+    virtual ~Socket(){};
     
     virtual bool create()=0;
     virtual bool customBind(int port, std::string ip)=0;
