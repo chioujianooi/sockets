@@ -2,7 +2,7 @@
 #include <ws2tcpip.h>
 #include <iostream>
 
-WinSocket::WinSocket(int port, std::string ip, int protocol) : Socket(port, ip, protocol) {
+WinSocket::WinSocket() : Socket() {
     // Initialize Winsock
    
 }
@@ -24,19 +24,17 @@ bool WinSocket::create() {
     socket_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (socket_ == INVALID_SOCKET) {
         std::cerr << "Error at socket(): " << WSAGetLastError() << std::endl;
-        WSACleanup();
+        //TODO: should we close the socket and WSACleanup here?
         return false;
     }
     return true; // Placeholder
 }
 
-bool WinSocket::customBind() {
-    sockaddr_in service;
-    service.sin_family = AF_INET;
-    InetPton(AF_INET, ip_.c_str(), &service.sin_addr.s_addr);
-    service.sin_port = htons(port_);
+bool WinSocket::customBind(int port, std::string ip) {
+    auto service = generateSockaddr_in(port, ip);
     if (bind(socket_, (sockaddr*)&service, sizeof(service)) == SOCKET_ERROR) {
         std::cerr << "Error at bind(): " << WSAGetLastError() << std::endl;
+        //TODO: should we close the socket here?
         return false;
     }
     return true; // Placeholder
@@ -45,29 +43,39 @@ bool WinSocket::customBind() {
 bool WinSocket::customListen(int clients) {
      if (listen(socket_, clients) == SOCKET_ERROR) {
         std::cerr << "Error at listen(): " << WSAGetLastError() << std::endl;
+
+        //TODO: should we close the socket here?
         return false;
     }
     return true; // Placeholder
 }
 
-Socket* WinSocket::customAaccept() {
+Socket* WinSocket::customAccept() {
     acceptSocket_ = accept(socket_, nullptr, nullptr);
     if(acceptSocket_ == INVALID_SOCKET) {
         std::cerr << "Error at accept(): " << WSAGetLastError() << std::endl;
+        //TODO: should we close the socket here?
         return nullptr;
     }
     return nullptr; // Placeholder
 }
 
 void WinSocket::customConnect(int port, std::string ip) {
-     sockaddr_in service;
+    auto service = generateSockaddr_in(port, ip);
+    if(connect(socket_, (sockaddr*)&service, sizeof(service)) == SOCKET_ERROR) {
+        std::cerr << "Error at connect(): " << WSAGetLastError() << std::endl;
+        //TODO: should we close the socket here?
+    }
+    // Implement customConnect logic here
+}
+
+sockaddr_in WinSocket::generateSockaddr_in(int port, std::string ip)
+{
+    
+    sockaddr_in service;
     service.sin_family = AF_INET;
     InetPton(AF_INET, ip.c_str(), &service.sin_addr.s_addr);
     service.sin_port = htons(port);
 
-
-    if(connect(socket_, (sockaddr*)&service, sizeof(service)) == SOCKET_ERROR) {
-        std::cerr << "Error at connect(): " << WSAGetLastError() << std::endl;
-    }
-    // Implement customConnect logic here
+    return service;
 }
