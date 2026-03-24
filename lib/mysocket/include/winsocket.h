@@ -9,16 +9,16 @@ public:
     ~WinServerSocket();
 
     bool create() override;
-    Socket* customAccept() override;
+    char* customAccept() override;
     bool customBind(int port, const char* ip, int ipSize) override;
     bool customListen(int clients) override;
     
-    int sendData(const char* data, int size) override;
-    int receiveData(char* buffer, int size) override;
+    int sendData(const char* data, int size, const char* ip) override;
+    int receiveData(char* buffer, int size, const char* ip) override;
 
 private:
-    SOCKET socket_=0;
-    SOCKET acceptSocket_=0;
+    struct Impl;
+    Impl* pImpl_;
 };
 
 

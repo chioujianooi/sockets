@@ -16,8 +16,7 @@ public:
     
     virtual ~Socket(){};
     virtual bool create()=0;
-    virtual int sendData(const char* data, int size)=0;
-    virtual int receiveData(char* buffer, int size)=0;
+    
 
 protected:
      Socket() = default;
@@ -29,7 +28,9 @@ public:
     ~ServerSocket() override = default;
     virtual bool customBind(int port, const char* ip, int ipSize)=0;
     virtual bool customListen(int clients)=0;
-    virtual Socket*customAccept()=0;
+    virtual char*customAccept()=0;
+    virtual int sendData(const char* data, int size,const char* ip)=0;
+    virtual int receiveData(char* buffer, int size, const char* ip)=0;
 };
 
 class MYSOCKET ClientSocket : public Socket {
@@ -37,5 +38,6 @@ public:
     ClientSocket() = default;
     ~ClientSocket() override = default;
     virtual void customConnect(int port, const char* ip, int ipSize)=0;
-
+    virtual int sendData(const char* data, int size)=0;
+    virtual int receiveData(char* buffer, int size)=0;
 };

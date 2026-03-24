@@ -2,6 +2,7 @@
 #include "winsocket.h"
 #include <ws2tcpip.h>
 #include <iostream>
+#include <unordered_map>
 
 sockaddr_in generateSockaddr_in(int port, std::string_view ip)
 {
@@ -46,24 +47,31 @@ int receiveDataGeneral(SOCKET& s, char* buffer, int size) {
     return bytesReceived;
 }
 
-WinServerSocket::WinServerSocket() : ServerSocket() {
+struct WinServerSocket::Impl {
+    SOCKET socket_;
+    int clientCount;
+    std::unordered_map<std::string, SOCKET> clientSockets; // Map to store client Ips and their sockets
+};
+
+WinServerSocket::WinServerSocket() : ServerSocket(), pImpl_(new Impl()) {
     // Initialize Winsock
    
 }
 
 WinServerSocket::~WinServerSocket() {
 
-    closesocket(socket_);
+    closesocket(pImpl_->socket_);
+    delete pImpl_;
     WSACleanup();
 }
 
 bool WinServerSocket::create() {
-    return createSocket(socket_);
+    return createSocket(pImpl_->socket_);
 }
 
 bool WinServerSocket::customBind(int port, const char* ip, int ipSize) {
     auto service = generateSockaddr_in(port, std::string_view(ip, ipSize));
-    if (bind(socket_, (sockaddr*)&service, sizeof(service)) == SOCKET_ERROR) {
+    if (bind(pImpl_->socket_, (sockaddr*)&service, sizeof(service)) == SOCKET_ERROR) {
         std::cerr << "Error at bind(): " << WSAGetLastError() << std::endl;
         //TODO: should we close the socket here?
         return false;
@@ -72,7 +80,7 @@ bool WinServerSocket::customBind(int port, const char* ip, int ipSize) {
 }
 
 bool WinServerSocket::customListen(int clients) {
-     if (listen(socket_, clients) == SOCKET_ERROR) {
+     if (listen(pImpl_->socket_, clients) == SOCKET_ERROR) {
         std::cerr << "Error at listen(): " << WSAGetLastError() << std::endl;
 
         //TODO: should we close the socket here?
@@ -81,25 +89,39 @@ bool WinServerSocket::customListen(int clients) {
     return true; // Placeholder
 }
 
-Socket* WinServerSocket::customAccept() {
-    acceptSocket_ = accept(socket_, nullptr, nullptr);
-    if(acceptSocket_ == INVALID_SOCKET) {
+char* WinServerSocket::customAccept() {
+    sockaddr clientInfo;
+    int clientInfoSize = sizeof(clientInfo);
+    auto acceptedSocket= accept(pImpl_->socket_, &clientInfo, &clientInfoSize);
+    if(acceptedSocket == INVALID_SOCKET) {
         std::cerr << "Error at accept(): " << WSAGetLastError() << std::endl;
         //TODO: should we close the socket here?
         return nullptr;
     }
-    return nullptr; // Placeholder
+    std::string clientIp=clientInfo.sa_data; // Extract client IP from clientInfo
+    pImpl_->clientSockets[clientIp] = acceptedSocket; // Store the accepted socket in the map
+    return clientIp.data(); // Placeholder
 }
 
 
 
-int WinServerSocket::sendData(const char* data, int size) {
-    return sendDataGeneral(socket_, data, size);
+int WinServerSocket::sendData(const char* data, int size, const char* ip) {
+    auto it = pImpl_->clientSockets.find(ip);
+    if (it == pImpl_->clientSockets.end()) {
+        std::cerr << "Client with IP " << ip << " not found." << std::endl;
+        return -1; // Client not found
+    }
+    return sendDataGeneral(it->second, data, size);
 }
 
 
-int WinServerSocket::receiveData(char* buffer, int size) {
-    return receiveDataGeneral(acceptSocket_, buffer, size);
+int WinServerSocket::receiveData(char* buffer, int size, const char* ip) {
+    auto it = pImpl_->clientSockets.find(ip);
+    if (it == pImpl_->clientSockets.end()) {
+        std::cerr << "Client with IP " << ip << " not found." << std::endl;
+        return -1; // Client not found
+    }
+    return receiveDataGeneral(it->second, buffer, size);
 }
 
 bool WinClientSocket::create()
