@@ -9,12 +9,12 @@ public:
     ~WinServerSocket();
 
     bool create() override;
-    char* customAccept() override;
+    unsigned long long customAccept() override;
     bool customBind(int port, const char* ip, int ipSize) override;
     bool customListen(int clients) override;
     
-    int sendData(const char* data, int size, const char* ip) override;
-    int receiveData(char* buffer, int size, const char* ip) override;
+    int sendData(const char* data, int size, unsigned long long socket) override;
+    int receiveData(char* buffer, int size, unsigned long long socket) override;
 
 private:
     struct Impl;

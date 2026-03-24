@@ -1,7 +1,5 @@
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
-
-
 # Create a shared library (DLL on Windows)
 add_library(mysocket SHARED
     src/winsocket.cpp

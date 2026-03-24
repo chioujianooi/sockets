@@ -2,7 +2,7 @@
 #include "winsocket.h"
 #include <ws2tcpip.h>
 #include <iostream>
-#include <unordered_map>
+#include <unordered_set>
 
 sockaddr_in generateSockaddr_in(int port, std::string_view ip)
 {
@@ -31,7 +31,7 @@ bool createSocket(SOCKET& s) {
     return true;
 }
 
-int sendDataGeneral(SOCKET& s, const char* data, int size) {
+int sendDataGeneral(const SOCKET& s, const char* data, int size) {
     int bytesSent = send(s, data, size, 0);
     if (bytesSent == SOCKET_ERROR) {
         std::cerr << "Error at send(): " << WSAGetLastError() << std::endl;
@@ -39,7 +39,7 @@ int sendDataGeneral(SOCKET& s, const char* data, int size) {
     return bytesSent;
 }
 
-int receiveDataGeneral(SOCKET& s, char* buffer, int size) {
+int receiveDataGeneral(const SOCKET& s, char* buffer, int size) {
     int bytesReceived = recv(s, buffer, size, 0);
     if (bytesReceived == SOCKET_ERROR) {
         std::cerr << "Error at receive(): " << WSAGetLastError() << std::endl;
@@ -50,7 +50,7 @@ int receiveDataGeneral(SOCKET& s, char* buffer, int size) {
 struct WinServerSocket::Impl {
     SOCKET socket_;
     int clientCount;
-    std::unordered_map<std::string, SOCKET> clientSockets; // Map to store client Ips and their sockets
+    std::unordered_set<SOCKET> clientSockets; // Set to store client sockets
 };
 
 WinServerSocket::WinServerSocket() : ServerSocket(), pImpl_(new Impl()) {
@@ -89,39 +89,38 @@ bool WinServerSocket::customListen(int clients) {
     return true; // Placeholder
 }
 
-char* WinServerSocket::customAccept() {
-    sockaddr clientInfo;
-    int clientInfoSize = sizeof(clientInfo);
-    auto acceptedSocket= accept(pImpl_->socket_, &clientInfo, &clientInfoSize);
+unsigned long long WinServerSocket::customAccept() {
+    
+    auto acceptedSocket= accept(pImpl_->socket_, nullptr,nullptr);
     if(acceptedSocket == INVALID_SOCKET) {
         std::cerr << "Error at accept(): " << WSAGetLastError() << std::endl;
         //TODO: should we close the socket here?
-        return nullptr;
+        return 0;
     }
-    std::string clientIp=clientInfo.sa_data; // Extract client IP from clientInfo
-    pImpl_->clientSockets[clientIp] = acceptedSocket; // Store the accepted socket in the map
-    return clientIp.data(); // Placeholder
+   
+    pImpl_->clientSockets.insert(acceptedSocket); // Store the accepted socket in the set
+    return acceptedSocket; // Placeholder
 }
 
 
 
-int WinServerSocket::sendData(const char* data, int size, const char* ip) {
-    auto it = pImpl_->clientSockets.find(ip);
+int WinServerSocket::sendData(const char* data, int size, unsigned long long socket) {
+    auto it = pImpl_->clientSockets.find(socket);
     if (it == pImpl_->clientSockets.end()) {
-        std::cerr << "Client with IP " << ip << " not found." << std::endl;
+        std::cerr << "Client with socket " << socket << " not found." << std::endl;
         return -1; // Client not found
     }
-    return sendDataGeneral(it->second, data, size);
+    return sendDataGeneral(*it, data, size);
 }
 
 
-int WinServerSocket::receiveData(char* buffer, int size, const char* ip) {
-    auto it = pImpl_->clientSockets.find(ip);
+int WinServerSocket::receiveData(char* buffer, int size, unsigned long long socket) {
+    auto it = pImpl_->clientSockets.find(socket);
     if (it == pImpl_->clientSockets.end()) {
-        std::cerr << "Client with IP " << ip << " not found." << std::endl;
+        std::cerr << "Client with socket " << socket << " not found." << std::endl;
         return -1; // Client not found
     }
-    return receiveDataGeneral(it->second, buffer, size);
+    return receiveDataGeneral(*it, buffer, size);
 }
 
 bool WinClientSocket::create()

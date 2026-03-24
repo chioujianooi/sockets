@@ -28,9 +28,9 @@ public:
     ~ServerSocket() override = default;
     virtual bool customBind(int port, const char* ip, int ipSize)=0;
     virtual bool customListen(int clients)=0;
-    virtual char*customAccept()=0;
-    virtual int sendData(const char* data, int size,const char* ip)=0;
-    virtual int receiveData(char* buffer, int size, const char* ip)=0;
+    virtual unsigned long long customAccept()=0;
+    virtual int sendData(const char* data, int size,unsigned long long socket)=0;
+    virtual int receiveData(char* buffer, int size, unsigned long long socket)=0;
 };
 
 class MYSOCKET ClientSocket : public Socket {
