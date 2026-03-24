@@ -1,8 +1,9 @@
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
-# Create a shared library (DLL on Windows)
+
 add_library(mysocket SHARED
-    src/winsocket.cpp
+    $<$<PLATFORM_ID:WIN32>:${CMAKE_CURRENT_SOURCE_DIR}/src/windows/winsocket.cpp>
+    $<$<NOT:$<PLATFORM_ID:LINUX>>:${CMAKE_CURRENT_SOURCE_DIR}/src/linux/posixsocket.cpp>
 )
 
 set_target_properties(mysocket PROPERTIES
@@ -10,12 +11,17 @@ set_target_properties(mysocket PROPERTIES
     SOVERSION 1
 )
 
+
+
 # Include headers
 target_include_directories(mysocket
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PUBLIC 
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    $<$<PLATFORM_ID:WIN32>:${CMAKE_CURRENT_SOURCE_DIR}/include/windows>
+    $<$<NOT:$<PLATFORM_ID:LINUX>>:${CMAKE_CURRENT_SOURCE_DIR}/include/linux>
 )
 
-target_link_libraries(mysocket PRIVATE ws2_32)
+target_link_libraries(mysocket PRIVATE $<$<PLATFORM_ID:WIN32>:ws2_32>)
 
 target_compile_definitions(mysocket
     PRIVATE MYSOCKET_EXPORTS
