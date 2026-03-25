@@ -1,5 +1,4 @@
-#include "posixsocket.h"
-
+#include "socket.h"
 #include <unistd.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
@@ -18,68 +17,68 @@ sockaddr_in generateSockaddr_in(int port, std::string_view ip)
     return service;
 }
 
-struct PosixServerSocket::Impl
+struct ServerSocket::Impl
 {
     int socket_ = -1;
     std::unordered_set<int> clientSockets_;
 };
 
-PosixServerSocket::PosixServerSocket(): impl_(new Impl())
+ServerSocket::ServerSocket(): pImpl_(new Impl())
 {
 }
 
-PosixServerSocket::~PosixServerSocket()
+ServerSocket::~ServerSocket()
 {
-    if(impl_->socket_ != -1) {
-        close(impl_->socket_);
+    if(pImpl_->socket_ != -1) {
+        close(pImpl_->socket_);
     }
-    delete impl_;
+    delete pImpl_;
 }
 
-bool PosixServerSocket::create()
+bool ServerSocket::create()
 {
-    impl_->socket_ = socket(AF_INET, SOCK_STREAM, 0);
-    if(impl_->socket_ == -1) {
+    pImpl_->socket_ = socket(AF_INET, SOCK_STREAM, 0);
+    if(pImpl_->socket_ == -1) {
         std::cerr << "Failed to create socket" << std::endl;
         return false;
     }
     return true;
 }
 
-bool PosixServerSocket::customBind(int port, const char *ip, int ipSize)
+bool ServerSocket::customBind(int port, const char *ip, int ipSize)
 {
     sockaddr_in service = generateSockaddr_in(port, std::string_view(ip, ipSize));
-    if(bind(impl_->socket_, reinterpret_cast<sockaddr*>(&service), sizeof(service)) == -1) {
+    if(bind(pImpl_->socket_, reinterpret_cast<sockaddr*>(&service), sizeof(service)) == -1) {
         std::cerr << "Failed to bind socket" << std::endl;
         return false;
     }
     return true;
 }
 
-bool PosixServerSocket::customListen(int clients)
+bool ServerSocket::customListen(int clients)
 {
-    if(listen(impl_->socket_, clients) == -1) {
+    if(listen(pImpl_->socket_, clients) == -1) {
         std::cerr << "Failed to listen on socket" << std::endl;
         return false;
     }
     return true;
 }
 
-unsigned long long PosixServerSocket::customAccept()
+unsigned long long ServerSocket::customAccept()
 {
-    int clientSocket = accept(impl_->socket_, nullptr, nullptr);
+    int clientSocket = accept(pImpl_->socket_, nullptr, nullptr);
     if(clientSocket == -1) {
         std::cerr << "Failed to accept connection" << std::endl;
         return 0;
     }
-    impl_->clientSockets_.insert(clientSocket);
+    pImpl_->clientSockets_.insert(clientSocket);
     return static_cast<unsigned long long>(clientSocket);
 }
 
-int PosixServerSocket::sendData(const char *data, int size, unsigned long long socket)
+int ServerSocket::sendData(const char *data, int size, unsigned long long socket)
 {
     int clientSocket = static_cast<int>(socket);
-    if(impl_->clientSockets_.find(clientSocket) == impl_->clientSockets_.end()) {
+    if(pImpl_->clientSockets_.find(clientSocket) == pImpl_->clientSockets_.end()) {
         std::cerr << "Invalid client socket" << std::endl;
         return -1;
     }
@@ -90,10 +89,10 @@ int PosixServerSocket::sendData(const char *data, int size, unsigned long long s
     return sentBytes;
 }
 
-int PosixServerSocket::receiveData(char *buffer, int size, unsigned long long socket)
+int ServerSocket::receiveData(char *buffer, int size, unsigned long long socket)
 {
     int clientSocket = static_cast<int>(socket);
-    if(impl_->clientSockets_.find(clientSocket) == impl_->clientSockets_.end()) {
+    if(pImpl_->clientSockets_.find(clientSocket) == pImpl_->clientSockets_.end()) {
         std::cerr << "Invalid client socket" << std::endl;
         return -1;
     }
@@ -104,40 +103,45 @@ int PosixServerSocket::receiveData(char *buffer, int size, unsigned long long so
     return receivedBytes;
 }
 
-PosixClientSocket::PosixClientSocket(): socket_(-1)
+struct ClientSocket::Impl
+{
+    int socket_ = -1;
+};
+
+ClientSocket::ClientSocket(): pImpl_(new Impl())
 {
 }
 
-bool PosixClientSocket::create()
+bool ClientSocket::create()
 {
-    socket_ = socket(AF_INET, SOCK_STREAM, 0);
-    if(socket_ == -1) {
+    pImpl_->socket_ = socket(AF_INET, SOCK_STREAM, 0);
+    if(pImpl_->socket_ == -1) {
         std::cerr << "Failed to create socket" << std::endl;
         return false;
     }
     return true;
 }
 
-void PosixClientSocket::customConnect(int port, const char *ip, int ipSize)
+void ClientSocket::customConnect(int port, const char *ip, int ipSize)
 {
     sockaddr_in service = generateSockaddr_in(port, std::string_view(ip, ipSize));
-    if(connect(socket_, reinterpret_cast<sockaddr*>(&service), sizeof(service)) == -1) {
+    if(connect(pImpl_->socket_, reinterpret_cast<sockaddr*>(&service), sizeof(service)) == -1) {
         std::cerr << "Failed to connect to server" << std::endl;
     }
 }
 
-int PosixClientSocket::sendData(const char *data, int size)
+int ClientSocket::sendData(const char *data, int size)
 {
-    auto sentBytes = send(socket_, data, size, 0);
+    auto sentBytes = send(pImpl_->socket_, data, size, 0);
     if(sentBytes == -1) {
         std::cerr << "Failed to send data" << std::endl;
     }
     return sentBytes;
 }
 
-int PosixClientSocket::receiveData(char *buffer, int size)
+int ClientSocket::receiveData(char *buffer, int size)
 {
-    auto receivedBytes = recv(socket_, buffer, size, 0);
+    auto receivedBytes = recv(pImpl_->socket_, buffer, size, 0);
     if(receivedBytes == -1) {
         std::cerr << "Failed to receive data" << std::endl;
     }
