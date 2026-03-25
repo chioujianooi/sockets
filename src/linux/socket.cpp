@@ -112,6 +112,14 @@ ClientSocket::ClientSocket(): pImpl_(new Impl())
 {
 }
 
+ClientSocket::~ClientSocket()
+{
+    if(pImpl_->socket_ != -1) {
+        close(pImpl_->socket_);
+    }
+    delete pImpl_;
+}
+
 bool ClientSocket::create()
 {
     pImpl_->socket_ = socket(AF_INET, SOCK_STREAM, 0);
