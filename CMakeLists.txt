@@ -5,5 +5,5 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_subdirectory(lib)
 
-add_executable(server main.cpp)
-target_link_libraries(server PRIVATE mysocket)
+add_executable(client main.cpp)
+target_link_libraries(client PRIVATE mysocket)
