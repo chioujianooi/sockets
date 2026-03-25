@@ -99,7 +99,7 @@ unsigned long long WinServerSocket::customAccept() {
     }
    
     pImpl_->clientSockets.insert(acceptedSocket); // Store the accepted socket in the set
-    return acceptedSocket; // Placeholder
+    return static_cast<unsigned long long>(acceptedSocket); // Placeholder
 }
 
 
@@ -142,7 +142,6 @@ void WinClientSocket::customConnect(int port, const char* ip, int ipSize)
     auto service = generateSockaddr_in(port, std::string_view(ip, ipSize));
     if(connect(socket_, (sockaddr*)&service, sizeof(service)) == SOCKET_ERROR) {
         std::cerr << "Error at connect(): " << WSAGetLastError() << std::endl;
-        //TODO: should we close the socket here?
     }
     // Implement customConnect logic here
 }
