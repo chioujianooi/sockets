@@ -24,20 +24,29 @@ protected:
 
 class MYSOCKET ServerSocket : public Socket {
 public:
-    ServerSocket() = default;
-    ~ServerSocket() override = default;
-    virtual bool customBind(int port, const char* ip, int ipSize)=0;
-    virtual bool customListen(int clients)=0;
-    virtual unsigned long long customAccept()=0;
-    virtual int sendData(const char* data, int size,unsigned long long socket)=0;
-    virtual int receiveData(char* buffer, int size, unsigned long long socket)=0;
+    ServerSocket();
+    ~ServerSocket() override;
+    bool create() override;
+    bool customBind(int port, const char* ip, int ipSize);
+    bool customListen(int clients);
+    unsigned long long customAccept();
+    int sendData(const char* data, int size,unsigned long long socket);
+    int receiveData(char* buffer, int size, unsigned long long socket);
+private:
+    struct Impl;
+    Impl* pImpl_;
 };
 
 class MYSOCKET ClientSocket : public Socket {
 public:    
-    ClientSocket() = default;
-    ~ClientSocket() override = default;
-    virtual void customConnect(int port, const char* ip, int ipSize)=0;
-    virtual int sendData(const char* data, int size)=0;
-    virtual int receiveData(char* buffer, int size)=0;
+    ClientSocket();
+    ~ClientSocket() override;
+    bool create() override;
+    void customConnect(int port, const char* ip, int ipSize);
+    int sendData(const char* data, int size);
+    int receiveData(char* buffer, int size);
+private:
+    struct Impl;
+    Impl* pImpl_;
 };
+

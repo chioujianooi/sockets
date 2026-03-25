@@ -1,8 +1,9 @@
 
-#include "winsocket.h"
+#include "socket.h"
 #include <ws2tcpip.h>
 #include <iostream>
 #include <unordered_set>
+#include <string_view>
 
 sockaddr_in generateSockaddr_in(int port, std::string_view ip)
 {
@@ -47,29 +48,29 @@ int receiveDataGeneral(const SOCKET& s, char* buffer, int size) {
     return bytesReceived;
 }
 
-struct WinServerSocket::Impl {
+struct ServerSocket::Impl {
     SOCKET socket_;
     int clientCount;
     std::unordered_set<SOCKET> clientSockets; // Set to store client sockets
 };
 
-WinServerSocket::WinServerSocket() : ServerSocket(), pImpl_(new Impl()) {
+ServerSocket::ServerSocket() :  pImpl_(new Impl()) {
     // Initialize Winsock
    
 }
 
-WinServerSocket::~WinServerSocket() {
+ServerSocket::~ServerSocket() {
 
     closesocket(pImpl_->socket_);
     delete pImpl_;
     WSACleanup();
 }
 
-bool WinServerSocket::create() {
+bool ServerSocket::create() {
     return createSocket(pImpl_->socket_);
 }
 
-bool WinServerSocket::customBind(int port, const char* ip, int ipSize) {
+bool ServerSocket::customBind(int port, const char* ip, int ipSize) {
     auto service = generateSockaddr_in(port, std::string_view(ip, ipSize));
     if (bind(pImpl_->socket_, (sockaddr*)&service, sizeof(service)) == SOCKET_ERROR) {
         std::cerr << "Error at bind(): " << WSAGetLastError() << std::endl;
@@ -79,7 +80,7 @@ bool WinServerSocket::customBind(int port, const char* ip, int ipSize) {
     return true; // Placeholder
 }
 
-bool WinServerSocket::customListen(int clients) {
+bool ServerSocket::customListen(int clients) {
      if (listen(pImpl_->socket_, clients) == SOCKET_ERROR) {
         std::cerr << "Error at listen(): " << WSAGetLastError() << std::endl;
 
@@ -89,7 +90,7 @@ bool WinServerSocket::customListen(int clients) {
     return true; // Placeholder
 }
 
-unsigned long long WinServerSocket::customAccept() {
+unsigned long long ServerSocket::customAccept() {
     
     auto acceptedSocket= accept(pImpl_->socket_, nullptr,nullptr);
     if(acceptedSocket == INVALID_SOCKET) {
@@ -104,7 +105,7 @@ unsigned long long WinServerSocket::customAccept() {
 
 
 
-int WinServerSocket::sendData(const char* data, int size, unsigned long long socket) {
+int ServerSocket::sendData(const char* data, int size, unsigned long long socket) {
     auto it = pImpl_->clientSockets.find(socket);
     if (it == pImpl_->clientSockets.end()) {
         std::cerr << "Client with socket " << socket << " not found." << std::endl;
@@ -114,7 +115,7 @@ int WinServerSocket::sendData(const char* data, int size, unsigned long long soc
 }
 
 
-int WinServerSocket::receiveData(char* buffer, int size, unsigned long long socket) {
+int ServerSocket::receiveData(char* buffer, int size, unsigned long long socket) {
     auto it = pImpl_->clientSockets.find(socket);
     if (it == pImpl_->clientSockets.end()) {
         std::cerr << "Client with socket " << socket << " not found." << std::endl;
@@ -123,33 +124,38 @@ int WinServerSocket::receiveData(char* buffer, int size, unsigned long long sock
     return receiveDataGeneral(*it, buffer, size);
 }
 
-bool WinClientSocket::create()
+struct ClientSocket::Impl {
+    SOCKET socket_;
+};
+
+bool ClientSocket::create()
 {
-    return createSocket(socket_);
+    return createSocket(pImpl_->socket_);
 }
 
-WinClientSocket::WinClientSocket() : ClientSocket() {
+ClientSocket::ClientSocket() : pImpl_(new Impl()) {
     // Initialize Winsock
 }
 
-WinClientSocket::~WinClientSocket() {
-    closesocket(socket_);
-    WSACleanup();
+ClientSocket::~ClientSocket() {
+    closesocket(pImpl_->socket_);
+    delete pImpl_;
 }
 
-void WinClientSocket::customConnect(int port, const char* ip, int ipSize)
+
+void ClientSocket::customConnect(int port, const char* ip, int ipSize)
 {
     auto service = generateSockaddr_in(port, std::string_view(ip, ipSize));
-    if(connect(socket_, (sockaddr*)&service, sizeof(service)) == SOCKET_ERROR) {
+    if(connect(pImpl_->socket_, (sockaddr*)&service, sizeof(service)) == SOCKET_ERROR) {
         std::cerr << "Error at connect(): " << WSAGetLastError() << std::endl;
     }
     // Implement customConnect logic here
 }
 
-int WinClientSocket::sendData(const char* data, int size) {
-    return sendDataGeneral(socket_, data, size);
+int ClientSocket::sendData(const char* data, int size) {
+    return sendDataGeneral(pImpl_->socket_, data, size);
 }
 
-int WinClientSocket::receiveData(char* buffer, int size) {
-    return receiveDataGeneral(socket_, buffer, size);
+int ClientSocket::receiveData(char* buffer, int size) {
+    return receiveDataGeneral(pImpl_->socket_, buffer, size);
 }
