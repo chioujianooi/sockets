@@ -49,6 +49,7 @@ install(DIRECTORY include/
     DESTINATION include
 )
 
+
 install(EXPORT mysocketTargets
     FILE mysocketTargets.cmake
     NAMESPACE mysocket::
@@ -75,8 +76,10 @@ install(FILES
     DESTINATION lib/cmake/mysocket
 )
 
+if(MSVC)
 install(FILES
     $<TARGET_PDB_FILE:mysocket>
     DESTINATION bin
     OPTIONAL
 )
+endif()
